@@ -8,101 +8,73 @@
 #
 # Then enter the directory containing this Makefile and run it with:
 #
-#     $ make --check-symlink-times -j 6
-#
-# This script conserves disk space using symlinks, and therefore the
-# `--check-symlink-times` option above is necessary to avoid
-# re-running rules involving symlinks (for more detail, see
-# http://stackoverflow.com/a/19138136).
+#     $ make -j 6
 
 
 # Configuration settings
 input_prefix = /archive/MCB5429/Final_data/ChIPseq
-scratch = /tempdata/$(shell whoami) #FIXME: this is currently unused.
+genome = hg19
 chromosome = chr15
+adapter = GATCGGAAGAGCTCGTATGCCGTCTTCTGCTTGAAA
+bowtie_index = /archive/MCB5429/genomes/$(genome)/bowtieIndex/$(genome)
+threads = 1
 
 # Convenience variables for make rules
-fastq_abs = $(wildcard $(input_prefix)/*.fastq)
-fastq_inputs = $(addsuffix %.fastq,$(dir $(fastq_abs)))
-fastq = $(notdir $(fastq_abs))
-fastqc_targets = $(fastq:.fastq=_fastqc.data)
-trim_targets = $(fastq:.fastq=.adapter_removal_1.fastq)
-reqc_targets = $(trim_targets:.fastq=_fastqc.data)
 this_makefile = $(lastword $(MAKEFILE_LIST))
-
-# Rule sets
-all : qc trim
-qc : $(fastqc_targets)
-trim : $(trim_targets)
-reqc : 
+fastq = $(notdir $(wildcard $(input_prefix)/*.fastq))
+targets_qc = $(fastq:.fastq=_fastqc.data)
+targets_adapter_stripped = $(fastq:.fastq=.adapter_removed.fastq)
+targets_reqc = $(targets_adapter_stripped:.fastq=_fastqc.data)
+targets_aligned = $(fastq:.fastq=.$(chromosome).bam)
 
 # Rules
+all : qc strip-adapters reqc align
+qc : $(addprefix qc1/,$(targets_qc))
+strip-adapters : $(targets_adapter_stripped)
+reqc : $(addprefix qc2/,$(targets_reqc))
+align : $(targets_aligned)
 
-# Initial QC of unprocessed data.
-%_fastqc.zip : $(fastq_inputs)
-	time fastqc -o . $<
+# QC of unprocessed data
+qc1/%_fastqc.zip : $(input_prefix)/%.fastq
+	mkdir -p $(@D)
+	fastqc -o $(@D)/ $<
 
-# Extract FastQC text file for overrepresented sequences.
-%_fastqc.data : %_fastqc.zip
-	unzip -p $< $(basename $<)/fastqc_data.txt > $@
+# Extract FastQC text file to see overrepresented sequences, etc
+qc1/%_fastqc.data : qc1/%_fastqc.zip
+	unzip -p $< $(basename $(<F))/fastqc_data.txt > $@
 
-# Create adapters file with overrepresented sequences, ignoring
-# sequences with "N" in them.
-%.unprocessed.adapters : %_fastqc.data
-	awk '{print $$1}' $< \
-	| awk '/^>>END_MODULE/ {seq=0} seq && /^[^#]/ && ! /.*N.*/ {print} /^>>Overrepresented/ {seq=1}' > $@
+# Remove adapters
+%.adapter_removed.fastq : $(input_prefix)/%.fastq
+	fastx_clipper -v -Q 33 -a $(adapter) -i $< -o $@
 
-# Remove adapters, if any.  Conserve disk space using symlinks for
-# unmodified data.
-%.adapter_removed_round_1.fastq : $(input_prefix)/%.fastq %.unprocessed.adapters
-	if [[ -s $(lastword $^) ]] ; then \
-		ln -vfs $< $@.before ; \
-		while read adapter ; do \
-			@echo "Removing adapter $$adapter from $(<F) ..." ; \
-			fastx_clipper -v -Q33 \
-			-i $@.before \
-			-o $@.after \
-			-a $$adapter ; \
-			mv -v $@.after $@.before ; \
-		done < $(lastword $^) ; \
-		mv -v $@.before $@ ; \
-	else \
-		ln -vfs $< $@ ; \
-	fi
+# Re-QC of adapter stripped data
+qc2/%_fastqc.zip : %.adapter_removed.fastq
+	mkdir -p $(@D)
+	fastqc -o $(@D)/ $<
 
-# Re-QC of processed data.
-%.adapter_removed_round_1._fastqc.zip : %.adapter_removed_round_1.fastq
-	time fastqc -o . $<
+# Extract FastQC text file to see overrepresented sequences, etc
+qc2/%_fastqc.data : qc2/%_fastqc.zip
+	unzip -p $< $(basename $(<F))/fastqc_data.txt > $@
 
-# Extract FastQC text file for overrepresented sequences.
-%.adapter_removed_round_1._fastqc.data: %.adapter_removed_round_1._fastqc.zip
-	unzip -p $< $(basename $<)/fastqc_data.txt > $@
+# Align reads
+%.bam : %.adapter_removed.fastq
+	bowtie -v2 -m1 --sam --time --threads $(threads) $(bowtie_index) $< \
+	| samtools view -hb /dev/stdin \
+	| samtools sort -O bam -T /tmp/PREFIX.nnnn.bam /dev/stdin -o $@
 
-# Create adapters file with overrepresented sequences, ignoring
-# sequences with "N" in them.
-%.adapter_removed_round_1.adapters : %.adapter_removed_round_1._fastqc.data
-	awk '{print $$1}' $< \
-	| awk '/^>>END_MODULE/ {seq=0} seq && /^[^#]/ && ! /.*N.*/ {print} /^>>Overrepresented/ {seq=1}' > $@
+%.bam.bai : %.bam
+	samtools index $<
 
-# Remove adapters, if any.  Conserve disk space using symlinks for
-# unmodified data.
-%.adapter_removed_round_2.fastq : %adapter_removed_round_1.fastq %.adapter_removed_round_1.adapters
-	if [[ -s $(lastword $^) ]] ; then \
-		ln -vfs $< $@.before ; \
-		while read adapter ; do \
-			@echo "Removing adapter $$adapter from $(<F) ..." ; \
-			fastx_clipper -v -Q33 \
-			-i $@.before \
-			-o $@.after \
-			-a $$adapter ; \
-			mv -v $@.after $@.before ; \
-		done < $(lastword $^) ; \
-		mv -v $@.before $@ ; \
-	else \
-		ln -vfs $< $@ ; \
-	fi
+%.$(chromosome).bam : %.bam %.bam.bai
+	samtools -bh view $< $(chromosome) > $@
 
-clean :
-	find -not -name $(this_makefile) -not -path . -delete
+# Remove files to be able to re-run sections of the pipeline
+clean-all : clean-qc clean-strip-adapters clean-align
+clean-qc :
+	rm -rf qc1/ qc2/
+clean-strip-adapters :
+	rm -f $(targets_adapter_stripped)
+clean-align :
+	rm -f *.bam *.bai
 
-.PHONY : clean all qc trim
+.PHONY : all qc strip-adapters reqc align clean-all clean-qc clean-strip-adapters clean-align
