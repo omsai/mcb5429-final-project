@@ -66,7 +66,7 @@ qc2/%_fastqc.data : qc2/%_fastqc.zip
 	samtools index $<
 
 %.$(chromosome).bam : %.bam %.bam.bai
-	samtools -bh view $< $(chromosome) > $@
+	samtools view -hb $< $(chromosome) > $@
 
 # Remove files to be able to re-run sections of the pipeline
 clean-all : clean-qc clean-strip-adapters clean-align
