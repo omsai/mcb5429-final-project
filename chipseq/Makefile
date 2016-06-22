@@ -60,7 +60,7 @@ qc2/%_fastqc.data : qc2/%_fastqc.zip
 %.bam : %.adapter_removed.fastq
 	bowtie -v2 -m1 --sam --time --threads $(threads) $(bowtie_index) $< \
 	| samtools view -hb /dev/stdin \
-	| samtools sort -O bam -T /tmp/PREFIX.nnnn.bam /dev/stdin -o $@
+	| samtools sort -O bam -T $(mktemp -d)/$@ /dev/stdin -o $@
 
 %.bam.bai : %.bam
 	samtools index $<
