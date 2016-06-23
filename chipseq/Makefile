@@ -24,7 +24,7 @@ color_untreated = 0,0,125
 color_treated = 125,0,0
 
 # Convenience functions
-filestem = $(firstword $(subst ., ,$1))
+filestem = $(foreach file,$1,$(firstword $(subst ., ,$(file))))
 colorize = $(if $(findstring untr,$(call filestem $1)) \
 	,$(color_untreated),$(color_treated))
 
