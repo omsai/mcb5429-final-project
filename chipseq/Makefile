@@ -17,6 +17,9 @@ genome = hg19
 genome_prefix = /archive/MCB5429/genomes/$(genome)
 genome_chromosome_sizes = $(genome_prefix)/$(genome)_chromInfo.txt
 chromosome = chr15
+chromosome_size = $(shell \
+	grep $(chromosome) $(genome_chromosome_sizes) \
+	| cut -f2)
 adapter = GATCGGAAGAGCTCGTATGCCGTCTTCTGCTTGAAA
 bowtie_index = $(genome_prefix)/bowtieIndex/$(genome)
 threads = 1
@@ -27,6 +30,22 @@ color_treated = 125,0,0
 filestem = $(foreach file,$1,$(firstword $(subst ., ,$(file))))
 colorize = $(if $(findstring untr,$(call filestem $1)) \
 	,$(color_untreated),$(color_treated))
+strip_underscores = $(shell echo "$1" | \
+	sed \
+	-e 's/__/_/g' \
+	-e 's/^_//')
+status_remove = $(call strip_underscores,$(shell echo "$1" | \
+	sed \
+	-e 's/untr//' \
+	-e 's/treat//'))
+status_move_to_end = $(call strip_underscores,$(shell echo "$1" | \
+	sed -E \
+	-e 's/(.*)untr(.*)/\1\2_untr/' \
+	-e 's/(.*)treat(.*)/\1\2_treat/'))
+add_treat_suffix = $(foreach file,$1, \
+	$(call status_move_to_end,$(file)))
+remove_treat_status = $(foreach file,$1, \
+	$(call status_remove,$(file)))
 
 # Convenience variables for make rules
 SHELL := /bin/bash		# Needed for <( )
@@ -37,15 +56,39 @@ targets_adapter_stripped = $(fastq:.fastq=.adapter_removed.fastq)
 targets_reqc = $(targets_adapter_stripped:.fastq=_fastqc.data)
 targets_aligned = $(fastq:.fastq=.$(chromosome).bam)
 targets_bedgraph = $(targets_aligned:.bam=.bedgraph)
+# Unfortunately the input file names have `untr' and `treat' in the
+# middle of the file name instead of towards the end.  This makes them
+# difficult to distinguish by Make's rules which tries to relate files
+# by extensions (i.e. differences at the end instead of the middle).
+# Therefore we need to create a symlinks with `untr' and `treat' which
+# point to the real targets.
+prereqs_call_peaks = $(targets_aligned)
+prereqs_call_peaks_symlinks = $(addsuffix .$(chromosome).bam, \
+	$(call add_treat_suffix, \
+	$(call filestem,$(fastq))))
+targets_call_peaks_no_suffix = $(sort \
+	$(call remove_treat_status, \
+	$(call filestem,$(fastq))))
+targets_call_peaks = $(foreach suffix,model.r model.pdf, \
+	$(addsuffix .$(chromosome)_$(suffix), \
+	$(targets_call_peaks_no_suffix)))
+# Function to fetch target from symlink
+symlink_hashmap = $(join \
+	$(addsuffix ~,$(prereqs_call_peaks)), \
+	$(prereqs_call_peaks_symlinks))
+symlink_target = $(subst ~$1,,$(filter %~$1,$(symlink_hashmap)))
 
 # Rules
-all : qc strip-adapters reqc align bedgraph
+all : qc strip-adapters reqc align bedgraph call-peaks
 qc : $(addprefix qc1/,$(targets_qc))
 strip-adapters : $(targets_adapter_stripped)
 reqc : $(addprefix qc2/,$(targets_reqc))
 align : $(targets_aligned)
 bedgraph : $(targets_bedgraph)
-.PHONY : all qc strip-adapters reqc align bedgraph
+call-peaks : $(targets_call_peaks)
+peak-sequences : $(targets_peak_sequences)
+
+.PHONY : all qc strip-adapters reqc align bedgraph call-peaks
 
 # QC of unprocessed data
 qc1/%_fastqc.zip : $(input_prefix)/%.fastq
@@ -96,6 +139,21 @@ qc2/%_fastqc.data : qc2/%_fastqc.zip
 # Create bedgraph
 %.$(chromosome).bedgraph : %.$(chromosome).bed %.$(chromosome).bedgraph.header
 	cat $(lastword $^) <( bedtools genomecov -bg -i $< -g $(genome_chromosome_sizes) ) > $@
+
+# Call peaks
+%.$(chromosome)_model.r : %_treat.$(chromosome).bam %_untr.$(chromosome).bam
+	macs14 --gsize=$(chromosome_size) --name=$(@:_peaks.bed=) \
+	--treatment=$< --control=$(lastword $^)
+
+# Temporary symlinks with treatment status at end of filename
+%_treat.$(chromosome).bam : | align # "Order-only" prerequisite
+	ln -s $(call symlink_target,$@) $@
+%_untr.$(chromosome).bam : | align # "Order-only" prerequisite
+	ln -s $(call symlink_target,$@) $@
+
+# Create PDF model images of the peak calls
+%.$(chromosome)_model.pdf : %.$(chromosome)_model.r
+	R CMD BATCH $<
 
 # Remove files to be able to re-run sections of the pipeline
 clean-all : clean-qc clean-strip-adapters clean-align clean-bedgraph
