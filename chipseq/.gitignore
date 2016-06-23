@@ -6,3 +6,8 @@ qc2/
 *.bai
 *.bed
 *.bedgraph
+*.pdf
+*.r
+*.Rout
+*.xls
+*.RData
