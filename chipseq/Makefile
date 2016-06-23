@@ -97,7 +97,7 @@ qc2/%_fastqc.data : qc2/%_fastqc.zip
 	cat $(lastword $^) <( bedtools genomecov -bg -i $< -g $(genome_chromosome_sizes) ) > $@
 
 # Remove files to be able to re-run sections of the pipeline
-clean-all : clean-qc clean-strip-adapters clean-align
+clean-all : clean-qc clean-strip-adapters clean-align clean-bedgraph
 clean-qc :
 	rm -rf qc1/ qc2/
 clean-strip-adapters :
@@ -106,4 +106,7 @@ clean-align :
 	rm -f *.bam *.bai
 clean-bedgraph :
 	rm -f *.bed *.header *.bedgraph
-.PHONY : clean-all clean-qc clean-strip-adapters clean-align clean-bedgraph
+clean-call-peaks :
+	rm -f *_model. *_peaks.xls *_peaks.bed *_summits.bed
+.PHONY : clean-all clean-qc clean-strip-adapters clean-align \
+	clean-bedgraph clean-call-peaks
