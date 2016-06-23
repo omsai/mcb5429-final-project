@@ -20,6 +20,7 @@ chromosome = chr15
 chromosome_size = $(shell \
 	grep $(chromosome) $(genome_chromosome_sizes) \
 	| cut -f2)
+chromosome_fasta = $(genome_prefix)/fasta/$(chromosome).fa
 adapter = GATCGGAAGAGCTCGTATGCCGTCTTCTGCTTGAAA
 bowtie_index = $(genome_prefix)/bowtieIndex/$(genome)
 threads = 1
@@ -77,9 +78,12 @@ symlink_hashmap = $(join \
 	$(addsuffix ~,$(prereqs_call_peaks)), \
 	$(prereqs_call_peaks_symlinks))
 symlink_target = $(subst ~$1,,$(filter %~$1,$(symlink_hashmap)))
+targets_peak_sequences = $(addsuffix \
+	.$(chromosome)_summits.top200.fa, \
+	$(targets_call_peaks_no_suffix))
 
 # Rules
-all : qc strip-adapters reqc align bedgraph call-peaks
+all : qc strip-adapters reqc align bedgraph call-peaks peak-sequences
 qc : $(addprefix qc1/,$(targets_qc))
 strip-adapters : $(targets_adapter_stripped)
 reqc : $(addprefix qc2/,$(targets_reqc))
@@ -88,7 +92,7 @@ bedgraph : $(targets_bedgraph)
 call-peaks : $(targets_call_peaks)
 peak-sequences : $(targets_peak_sequences)
 
-.PHONY : all qc strip-adapters reqc align bedgraph call-peaks
+.PHONY : all qc strip-adapters reqc align bedgraph call-peaks peak-sequences
 
 # QC of unprocessed data
 qc1/%_fastqc.zip : $(input_prefix)/%.fastq
@@ -141,7 +145,7 @@ qc2/%_fastqc.data : qc2/%_fastqc.zip
 	cat $(lastword $^) <( bedtools genomecov -bg -i $< -g $(genome_chromosome_sizes) ) > $@
 
 # Call peaks
-%.$(chromosome)_model.r : %_treat.$(chromosome).bam %_untr.$(chromosome).bam
+%.$(chromosome)_model.r %.$(chromosome)_summits.bed : %_treat.$(chromosome).bam %_untr.$(chromosome).bam
 	macs14 --gsize=$(chromosome_size) --name=$(@:_peaks.bed=) \
 	--treatment=$< --control=$(lastword $^)
 
@@ -155,6 +159,12 @@ qc2/%_fastqc.data : qc2/%_fastqc.zip
 %.$(chromosome)_model.pdf : %.$(chromosome)_model.r
 	R CMD BATCH $<
 
+# Get sequence around top 200 peaks
+%.$(chromosome)_summits.top200.fa : %.$(chromosome)_summits.bed
+	sort -n -r -k5 $< | head -200 \
+	| bedtools slop -i /dev/stdin -g $(genome_chromosome_sizes) -b 50 \
+	| bedtools getfasta -fi $(chromosome_fasta) -bed /dev/stdin -fo $@
+
 # Remove files to be able to re-run sections of the pipeline
 clean-all : clean-qc clean-strip-adapters clean-align clean-bedgraph
 clean-qc :
@@ -167,5 +177,7 @@ clean-bedgraph :
 	rm -f *.bed *.header *.bedgraph
 clean-call-peaks :
 	rm -f *_model. *_peaks.xls *_peaks.bed *_summits.bed
+clean-peak-sequences :
+	rm -f *.fa
 .PHONY : clean-all clean-qc clean-strip-adapters clean-align \
-	clean-bedgraph clean-call-peaks
+	clean-bedgraph clean-call-peaks clean-peak-sequences
