@@ -14,10 +14,11 @@
 # Configuration settings
 input_prefix = /archive/MCB5429/Final_data/ChIPseq
 genome = hg19
-genome_chromosome_sizes = /archive/MCB5429/genomes/$(genome)/$(genome)_chromInfo.txt
+genome_prefix = /archive/MCB5429/genomes/$(genome)
+genome_chromosome_sizes = $(genome_prefix)/$(genome)_chromInfo.txt
 chromosome = chr15
 adapter = GATCGGAAGAGCTCGTATGCCGTCTTCTGCTTGAAA
-bowtie_index = /archive/MCB5429/genomes/$(genome)/bowtieIndex/$(genome)
+bowtie_index = $(genome_prefix)/bowtieIndex/$(genome)
 threads = 1
 color_untreated=0,0,125
 color_treated=125,0,0
