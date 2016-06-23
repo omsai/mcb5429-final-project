@@ -20,8 +20,8 @@ chromosome = chr15
 adapter = GATCGGAAGAGCTCGTATGCCGTCTTCTGCTTGAAA
 bowtie_index = $(genome_prefix)/bowtieIndex/$(genome)
 threads = 1
-color_untreated=0,0,125
-color_treated=125,0,0
+color_untreated = 0,0,125
+color_treated = 125,0,0
 
 # Convenience functions
 filestem = $(firstword $(subst ., ,$1))
