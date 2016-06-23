@@ -4,3 +4,5 @@ qc2/
 *.fastq
 *.bam
 *.bai
+*.bed
+*.bedgraph

@@ -14,25 +14,37 @@
 # Configuration settings
 input_prefix = /archive/MCB5429/Final_data/ChIPseq
 genome = hg19
+genome_chromosome_sizes = /archive/MCB5429/genomes/$(genome)/$(genome)_chromInfo.txt
 chromosome = chr15
 adapter = GATCGGAAGAGCTCGTATGCCGTCTTCTGCTTGAAA
 bowtie_index = /archive/MCB5429/genomes/$(genome)/bowtieIndex/$(genome)
 threads = 1
+color_untreated=0,0,125
+color_treated=125,0,0
+
+# Convenience functions
+filestem = $(firstword $(subst ., ,$1))
+colorize = $(if $(findstring untr,$(call filestem $1)) \
+	,$(color_untreated),$(color_treated))
 
 # Convenience variables for make rules
+SHELL := /bin/bash		# Needed for <( )
 this_makefile = $(lastword $(MAKEFILE_LIST))
 fastq = $(notdir $(wildcard $(input_prefix)/*.fastq))
 targets_qc = $(fastq:.fastq=_fastqc.data)
 targets_adapter_stripped = $(fastq:.fastq=.adapter_removed.fastq)
 targets_reqc = $(targets_adapter_stripped:.fastq=_fastqc.data)
 targets_aligned = $(fastq:.fastq=.$(chromosome).bam)
+targets_bedgraph = $(targets_aligned:.bam=.bedgraph)
 
 # Rules
-all : qc strip-adapters reqc align
+all : qc strip-adapters reqc align bedgraph
 qc : $(addprefix qc1/,$(targets_qc))
 strip-adapters : $(targets_adapter_stripped)
 reqc : $(addprefix qc2/,$(targets_reqc))
 align : $(targets_aligned)
+bedgraph : $(targets_bedgraph)
+.PHONY : all qc strip-adapters reqc align bedgraph
 
 # QC of unprocessed data
 qc1/%_fastqc.zip : $(input_prefix)/%.fastq
@@ -62,19 +74,36 @@ qc2/%_fastqc.data : qc2/%_fastqc.zip
 	| samtools view -hb /dev/stdin \
 	| samtools sort -O bam -T $$(mktemp -d)/$@ /dev/stdin -o $@
 
+# Create index to be able to subset aligned file
 %.bam.bai : %.bam
 	samtools index $<
 
+# Subset to one chromosome
 %.$(chromosome).bam : %.bam %.bam.bai
 	samtools view -hb $< $(chromosome) > $@
+
+# Create sorted bed file
+%.$(chromosome).bed : %.$(chromosome).bam
+	bedtools bamtobed -i $< > $@
+
+# Create bedgraph header for tracklines
+%.$(chromosome).bedgraph.header :
+	echo 'track type=bedGraph name="$(call filestem,$@)_bedgraph"' > $@
+	echo 'visibility=full autoScale=on alwaysZero=on' >> $@
+	echo 'color=$(call colorize,$@) windowingFunction=maximum' >> $@
+
+# Create bedgraph
+%.$(chromosome).bedgraph : %.$(chromosome).bed %.$(chromosome).bedgraph.header
+	cat $(lastword $^) <( bedtools genomecov -bg -i $< -g $(genome_chromosome_sizes) ) > $@
 
 # Remove files to be able to re-run sections of the pipeline
 clean-all : clean-qc clean-strip-adapters clean-align
 clean-qc :
 	rm -rf qc1/ qc2/
 clean-strip-adapters :
-	rm -f $(targets_adapter_stripped)
+	rm -f *.fastq
 clean-align :
 	rm -f *.bam *.bai
-
-.PHONY : all qc strip-adapters reqc align clean-all clean-qc clean-strip-adapters clean-align
+clean-bedgraph :
+	rm -f *.bed *.header *.bedgraph
+.PHONY : clean-all clean-qc clean-strip-adapters clean-align clean-bedgraph
