@@ -12,3 +12,5 @@ qc2/
 *.xls
 *.RData
 *.fa
+*.motif/
+*.aligned/

@@ -81,9 +81,12 @@ symlink_target = $(subst ~$1,,$(filter %~$1,$(symlink_hashmap)))
 targets_peak_sequences = $(addsuffix \
 	.$(chromosome)_summits.top200.fa, \
 	$(targets_call_peaks_no_suffix))
+targets_motif_sequences = $(targets_peak_sequences:.fa=.motif/meme.txt)
+targets_motif_aligned = $(targets_peak_sequences:.fa=.motif.aligned/mast.txt)
 
 # Rules
-all : qc strip-adapters reqc align bedgraph call-peaks peak-sequences
+all : qc strip-adapters reqc align bedgraph call-peaks peak-sequences \
+	motif-sequences motif-aligned
 qc : $(addprefix qc1/,$(targets_qc))
 strip-adapters : $(targets_adapter_stripped)
 reqc : $(addprefix qc2/,$(targets_reqc))
@@ -91,8 +94,11 @@ align : $(targets_aligned)
 bedgraph : $(targets_bedgraph)
 call-peaks : $(targets_call_peaks)
 peak-sequences : $(targets_peak_sequences)
+motif-sequences : $(targets_motif_sequences)
+motif-aligned : $(targets_motif_aligned)
 
-.PHONY : all qc strip-adapters reqc align bedgraph call-peaks peak-sequences
+.PHONY : all qc strip-adapters reqc align bedgraph call-peaks peak-sequences \
+	motif-sequences motif-aligned
 
 # QC of unprocessed data
 qc1/%_fastqc.zip : $(input_prefix)/%.fastq
@@ -165,8 +171,19 @@ qc2/%_fastqc.data : qc2/%_fastqc.zip
 	| bedtools slop -i /dev/stdin -g $(genome_chromosome_sizes) -b 50 \
 	| bedtools getfasta -fi $(chromosome_fasta) -bed /dev/stdin -fo $@
 
+# Find 2 motifs in treated and untreated sequences
+%.$(chromosome)_summits.top200.motif/meme.txt : %.$(chromosome)_summits.top200.fa
+	mkdir -p $@
+	meme $< -dna -nmotifs 2 -minw 5 -maxw 10 -revcomp -mod zoops -oc $@
+
+# Align motifs and count
+%.$(chromosome)_summits.top200.motif.aligned/mast.txt : %.$(chromosome)_summits.top200.motif/meme.txt %.$(chromosome)_summits.top200.fa
+	mast $< $(lastword $^) -oc $@
+
 # Remove files to be able to re-run sections of the pipeline
-clean-all : clean-qc clean-strip-adapters clean-align clean-bedgraph
+clean-all : clean-qc clean-strip-adapters clean-align clean-bedgraph \
+	clean-call-peaks clean-peak-sequences clean-motif-sequences \
+	clean-motif-aligned
 clean-qc :
 	rm -rf qc1/ qc2/
 clean-strip-adapters :
@@ -179,5 +196,10 @@ clean-call-peaks :
 	rm -f *_model. *_peaks.xls *_peaks.bed *_summits.bed
 clean-peak-sequences :
 	rm -f *.fa
+clean-motif-sequences :
+	rm -rf *.motif/
+clean-motif-aligned :
+	rm -rf *.aligned/
 .PHONY : clean-all clean-qc clean-strip-adapters clean-align \
-	clean-bedgraph clean-call-peaks clean-peak-sequences
+	clean-bedgraph clean-call-peaks clean-peak-sequences \
+	clean-motif-sequences clean-motif-aligned
