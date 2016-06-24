@@ -1,0 +1,18 @@
+# Emacs
+*~
+
+# Symlinks
+*.fastq
+
+# FastQC
+*_fastqc.zip
+*_fastqc.html
+
+# Trimmed reads
+*.trim.fastq.gz
+
+# STAR align
+*_STARgenome/
+*_STARtmp/
+*.out
+*_Aligned.out.sam
