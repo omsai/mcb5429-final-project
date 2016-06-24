@@ -15,4 +15,13 @@
 *_STARgenome/
 *_STARtmp/
 *.out
+*.out.tab
 *_Aligned.out.sam
+
+# Bedgraph
+*.bedgraph
+*.bed
+*.sorted.sam
+
+# HTseq
+*.htseq
