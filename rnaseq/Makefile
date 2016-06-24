@@ -1,15 +1,17 @@
 # RNA-seq analysis
 # 
-# Since alignment takes a lot of memory and time, one can parallelize
-# with threads instead of multiple jobs:
+# Alignment takes a lot of memory and time.  Therefore, it is better
+# to parallelize just the `align' step using threads instead of
+# multiple make jobs:
 #
 #   $ qrsh -pe smp 8
 #   $ cd path/to/this/directory
 #   $ make threads=8 align
 #
-# Then run the the rest of the pipeline with multiple jobs:
+# Then run the the rest of the pipeline with one job for each input
+# file:
 #
-#   $ make -j8 && exit
+#   $ make -j4 threads=2 && exit
 
 
 # Configuration settings
