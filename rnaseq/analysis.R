@@ -90,3 +90,16 @@ dev.off()
 ##  Fraction of reads explained by "++,--": 0.4927
 ##  Fraction of reads explained by "+-,-+": 0.4923
 ##  ...
+
+########################################################################
+## 2.4 Parse out regulated genes
+
+res.df <- as.data.frame(res)
+## Get significant rows with pvalue < 0.05
+res.df <- na.omit(res.df[res.df$pvalue < 0.05,])
+## Regulated gene names
+res.df$reg <- as.factor(ifelse(res.df$log2FoldChange > 0, "up", "down"))
+reg <- rownames(res.df)
+upReg <- rownames(res.df[res.df$reg == "up",])
+downReg <- rownames(res.df[res.df$reg == "down",])
+write.csv(res.df, file = "reg.csv")
