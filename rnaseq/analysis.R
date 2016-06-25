@@ -3,6 +3,7 @@
 ## Configuration settings
 files.htseq <- Sys.glob("*.htseq")
 file.genes <- "/archive/MCB5429/annotations/hs/Beds/hg19_gencode_ENSG_geneID.bed"
+file.chip.peaks <- "/archive/MCB5429/Final_data/ChIPseq/MACSout/ChIP_overlap_treat_peaks_allChr.bed"
 
 ########################################################################
 ## 2.2 Comparison of replicates
@@ -112,3 +113,21 @@ reg <- rownames(res.df)
 upReg <- rownames(res.df[res.df$reg == "up",])
 downReg <- rownames(res.df[res.df$reg == "down",])
 write.csv(res.df, file = "reg.csv", quote = FALSE)
+## Write bed file of regulated genes
+reg.bed <- subset(read.bed(file.genes), name %in% reg)
+write.table(reg.bed, file = "reg.bed", quote = FALSE, sep = "\t",
+            row.names = FALSE, col.names = FALSE)
+
+########################################################################
+## 2.5 Distances between regulated gene TSS and ChIP-seq peaks
+
+system(paste("bedtools closest -d -a reg.bed -b", file.chip.peaks,
+             "> reg.dist"))
+col.names.dist <- c("chrom", "start", "end", "gene.id", "score",
+                    "strand", "chrom.peak", "start.peak", "stop.peak",
+                    "peak.id", "score.peak", "dist")
+dist <- read.delim("reg.dist", header = FALSE, sep = "\t",
+                   col.names = col.names.dist)
+res.df$gene.id <- rownames(res.df)
+rownames(res.df) <- NULL
+merged <- merge(dist, res.df, by = "gene.id")
