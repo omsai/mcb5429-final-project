@@ -9,14 +9,14 @@ file.genes <- "/archive/MCB5429/annotations/hs/Beds/hg19_gencode_ENSG_geneID.bed
 
 ## Read in the HTseq output as a data.frame
 counts <- do.call(cbind.data.frame,
-                  lapply(files.htseq, read.delim, header=FALSE,
-                         sep="\t", row.names=1,
-                         col.names=c("gene.id", "counts")))
+                  lapply(files.htseq, read.delim, header = FALSE,
+                         sep = "\t", row.names = 1,
+                         col.names = c("gene.id", "counts")))
 ## Set the column name to the filenames, but without the prefix and
 ## file extension
 col.names <- unlist(lapply(files.htseq, gsub,
-                           pattern="^RNAseq_(.*)_(.*)[.]htseq$",
-                           replacement="\\2.\\1"))
+                           pattern = "^RNAseq_(.*)_(.*)[.]htseq$",
+                           replacement = "\\2.\\1"))
 names(counts) <- col.names
 ## Drop the last 5 rows since they have summary statistics instead of
 ## gene counts
@@ -26,8 +26,8 @@ counts <- head(counts, -5)
 read.bed <- function (file.bed) {
     col.names.bed <- c("chrom", "start", "end", "name", "score",
                        "strand")
-    bed <- read.delim(file.bed, header=FALSE, sep="\t",
-                      col.names=col.names.bed)
+    bed <- read.delim(file.bed, header = FALSE, sep = "\t",
+                      col.names = col.names.bed)
     ## Drop empty columns, with all NAs
     col.na <- sapply(bed, function(x) all(is.na(x)))
     col.keep <- names(col.na)[!col.na]
@@ -85,7 +85,7 @@ dds <- DESeq(dds)
 res <- results(dds)
 setEPS()
 postscript("ma_plot.ps")
-plotMA(res, ylim=c(-1.5, 2))
+plotMA(res, ylim = c(-1.5, 2))
 dev.off()
 ## Determined all 4 datasets are single ended and not paired end using
 ## RSeQC per https://www.biostars.org/p/66627/#134380:
