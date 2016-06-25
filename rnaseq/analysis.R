@@ -74,6 +74,9 @@ dds <- DESeqDataSetFromMatrix(countData = countData,
 dds$condition <- relevel(dds$condition, ref = "untreated")
 dds <- DESeq(dds)
 res <- results(dds)
+png("ma_plot.png")
+plotMA(res, ylim=c(-1.5, 2))
+dev.off()
 ## Determined all 4 datasets are single ended and not paired end using
 ## RSeQC per https://www.biostars.org/p/66627/#134380:
 ##
