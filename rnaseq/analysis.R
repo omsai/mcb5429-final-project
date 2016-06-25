@@ -37,3 +37,16 @@ merged <- merge(counts, genes)
 fpkm <- exp(log(merged[,col.names]) + log(1e9) - log(merged$length) -
             log(colSums(merged[,col.names])))
 ## Plot
+library(ggplot2)
+cor.treat <- cor(fpkm$treat.1, fpkm$treat.2)
+ggplot(log2(fpkm), aes(treat.1, treat.2)) +
+    geom_point() + geom_smooth() +
+    annotate("text", label = sprintf("Correlation = %f", cor.treat),
+             x = 0, y = -10)
+ggsave("treat_correlation.png")
+cor.untr <- cor(fpkm$untr.1, fpkm$untr.2)
+ggplot(log2(fpkm), aes(untr.1, untr.2)) +
+    geom_point() + geom_smooth() +
+    annotate("text", label = sprintf("Correlation = %f", cor.untr),
+             x = 0, y = -10)
+ggsave("untr_correlation.png")
