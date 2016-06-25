@@ -15,8 +15,8 @@ counts <- do.call(cbind.data.frame,
 ## Set the column name to the filenames, but without the prefix and
 ## file extension
 col.names <- unlist(lapply(files.htseq, gsub,
-                           pattern="^RNAseq_|\\.htseq$",
-                           replacement=""))
+                           pattern="^RNAseq_(.*)_(.*)[.]htseq$",
+                           replacement="\\2.\\1"))
 names(counts) <- col.names
 ## Drop the last 5 rows since they have summary statistics instead of
 ## gene counts
