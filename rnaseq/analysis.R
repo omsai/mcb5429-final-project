@@ -63,7 +63,7 @@ ggsave("untr_correlation.ps")
 ########################################################################
 ## 2.3 Differential Gene Expression
 
-library(DESeq2)
+suppressMessages(library(DESeq2))
 ## Create DESeq2 object using DESeqDataFromMatrix
 ## 
 ## Generate countData
