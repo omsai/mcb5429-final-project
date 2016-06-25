@@ -43,13 +43,13 @@ ggplot(log2(fpkm), aes(treat.1, treat.2)) +
     geom_point() + geom_smooth() +
     annotate("text", label = sprintf("Correlation = %f", cor.treat),
              x = 0, y = -10)
-ggsave("treat_correlation.png")
+ggsave("treat_correlation.ps")
 cor.untr <- cor(fpkm$untr.1, fpkm$untr.2)
 ggplot(log2(fpkm), aes(untr.1, untr.2)) +
     geom_point() + geom_smooth() +
     annotate("text", label = sprintf("Correlation = %f", cor.untr),
              x = 0, y = -10)
-ggsave("untr_correlation.png")
+ggsave("untr_correlation.ps")
 
 ########################################################################
 ## 2.3 Differential Gene Expression
@@ -74,7 +74,8 @@ dds <- DESeqDataSetFromMatrix(countData = countData,
 dds$condition <- relevel(dds$condition, ref = "untreated")
 dds <- DESeq(dds)
 res <- results(dds)
-png("ma_plot.png")
+setEPS()
+postscript("ma_plot.ps")
 plotMA(res, ylim=c(-1.5, 2))
 dev.off()
 ## Determined all 4 datasets are single ended and not paired end using
