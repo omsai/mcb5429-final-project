@@ -50,3 +50,39 @@ ggplot(log2(fpkm), aes(untr.1, untr.2)) +
     annotate("text", label = sprintf("Correlation = %f", cor.untr),
              x = 0, y = -10)
 ggsave("untr_correlation.png")
+
+########################################################################
+## 2.3 Differential Gene Expression
+
+library(DESeq2)
+## Create DESeq2 object using DESeqDataFromMatrix
+## 
+## Generate countData
+countData <- merged[col.names]
+rownames(countData) <- merged$gene.id
+## Generate colData
+conditioner <- function(s) if (grepl("untr", s)) "untreated" else "treated"
+condition <- unlist(lapply(col.names, conditioner))
+# See notes at end of section for how single-read was determined
+type <- replicate(length(condition), "single-read")
+colData <- cbind.data.frame(condition, type)
+rownames(colData) <- col.names
+## Combine into DESeq2 object
+dds <- DESeqDataSetFromMatrix(countData = countData,
+                              colData = colData,
+                              design = ~ condition)
+dds$condition <- relevel(dds$condition, ref = "untreated")
+dds <- DESeq(dds)
+res <- results(dds)
+## Determined all 4 datasets are single ended and not paired end using
+## RSeQC per https://www.biostars.org/p/66627/#134380:
+##
+## $ pip install --user RSeQC
+## $ ls *.sorted.sam | xargs -n1 ~/.local/bin/infer_experiment.py \
+##  -r /archive/MCB5429/annotations/hs/Beds/hg19_gencode_ENSG_geneID.bed -i
+##  ...
+##  This is SingleEnd Data
+##  Fraction of reads failed to determine: 0.0150
+##  Fraction of reads explained by "++,--": 0.4927
+##  Fraction of reads explained by "+-,-+": 0.4923
+##  ...
