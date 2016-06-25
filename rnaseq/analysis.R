@@ -23,15 +23,24 @@ names(counts) <- col.names
 counts <- head(counts, -5)
 
 ## Convert counts to FPKM
-col.names.bed <- c("chrom", "start", "end", "gene.id", "score", "strand")
-genes <- read.delim(file.genes, header=FALSE, sep="\t",
-                    col.names=col.names.bed)
+read.bed <- function (file.bed) {
+    col.names.bed <- c("chrom", "start", "end", "name", "score",
+                       "strand")
+    bed <- read.delim(file.bed, header=FALSE, sep="\t",
+                      col.names=col.names.bed)
+    ## Drop empty columns, with all NAs
+    col.na <- sapply(bed, function(x) all(is.na(x)))
+    col.keep <- names(col.na)[!col.na]
+    bed[,col.keep]
+}
+genes <- read.bed(file.genes)
 genes$length <- genes$end - genes$start
 ## Prepare to merge data.frames
 counts$gene.id <- rownames(counts)
 rownames(counts) <- NULL
 ## Remove .NN suffix to match gene.id
 counts$gene.id <- sub("\\..*", "", counts$gene.id)
+names(genes)[names(genes) == "name"] <- "gene.id"
 merged <- merge(counts, genes)
 ## FPKM calculation per https://archive.is/V0bgu
 fpkm <- exp(log(merged[,col.names]) + log(1e9) - log(merged$length) -
