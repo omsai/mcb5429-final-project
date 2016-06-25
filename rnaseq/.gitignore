@@ -25,3 +25,6 @@
 
 # HTseq
 *.htseq
+
+# R
+.Rhistory
