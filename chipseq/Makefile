@@ -194,7 +194,7 @@ clean-align :
 clean-bedgraph :
 	rm -f *.bed *.header *.bedgraph
 clean-call-peaks :
-	rm -f *_model. *_peaks.xls *_peaks.bed *_summits.bed
+	rm -f *_model.r *_model.pdf *_peaks.xls *_peaks.bed *_summits.bed
 clean-peak-sequences :
 	rm -f *.fa
 clean-motif-sequences :
