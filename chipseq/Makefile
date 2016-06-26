@@ -111,7 +111,7 @@ qc1/%_fastqc.data : qc1/%_fastqc.zip
 
 # Remove adapters
 %.adapter_removed.fastq : $(input_prefix)/%.fastq
-	fastx_clipper -v -Q 33 -a $(adapter) -i $< -o $@
+	fastx_clipper -v -Q 33 -a $(adapter) -i $< -o $@ | tee $*.adapter_removed.out
 
 # Re-QC of adapter stripped data
 qc2/%_fastqc.zip : %.adapter_removed.fastq
@@ -125,6 +125,7 @@ qc2/%_fastqc.data : qc2/%_fastqc.zip
 # Align reads
 %.bam : %.adapter_removed.fastq
 	bowtie -v2 -m1 --sam --time --threads $(threads) $(bowtie_index) $< \
+	2> $*.align.out \
 	| samtools view -hb /dev/stdin \
 	| samtools sort -O bam -T $$(mktemp -d)/$@ /dev/stdin -o $@
 
