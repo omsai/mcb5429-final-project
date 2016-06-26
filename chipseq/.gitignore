@@ -14,3 +14,5 @@ qc2/
 *.fa
 *.motif/
 *.aligned/
+*.out
+submit.sh.*
