@@ -114,7 +114,7 @@ qc1/%_fastqc.data : qc1/%_fastqc.zip
 	fastx_clipper -v -Q 33 -a $(adapter) -i $< -o $@ | tee $*.adapter_removed.out
 
 # Re-QC of adapter stripped data
-qc2/%_fastqc.zip : %.adapter_removed.fastq
+qc2/%_fastqc.zip : %.fastq
 	mkdir -p $(@D)
 	fastqc -o $(@D)/ $<
 
