@@ -131,3 +131,5 @@ dist <- read.delim("reg.dist", header = FALSE, sep = "\t",
 res.df$gene.id <- rownames(res.df)
 rownames(res.df) <- NULL
 merged <- merge(dist, res.df, by = "gene.id")
+ggplot(merged, aes(log2(dist), color = reg)) + stat_ecdf()
+ggpsave("reg_cdf.ps")
