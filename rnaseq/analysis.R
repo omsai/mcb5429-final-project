@@ -133,3 +133,14 @@ rownames(res.df) <- NULL
 merged <- merge(dist, res.df, by = "gene.id")
 ggplot(merged, aes(log2(dist), color = reg)) + stat_ecdf()
 ggsave("reg_cdf.ps")
+
+########################################################################
+## 2.6 Screenshot from Browser
+
+## Select interesting genes to view in the genome browser
+within.1k <- merged[merged$dist <= 1000,]
+sorted <- within.1k[with(within.1k,
+                         order(dist, -abs(log2FoldChange), score.peak)),]
+## Interestingly, the top hits on chromosome 19 and 17 only appear in
+## untr.2 and none of the other samples, so it seems like an artifact.
+## Therefore, I look at the next highest hits on chr3 instead.
