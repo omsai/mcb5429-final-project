@@ -153,7 +153,7 @@ qc2/%_fastqc.data : qc2/%_fastqc.zip
 # Call peaks
 %.$(chromosome)_model.r %.$(chromosome)_summits.bed : %_treat.$(chromosome).bam %_untr.$(chromosome).bam
 	macs14 --gsize=$(chromosome_size) --name=$(@:_peaks.bed=) \
-	--treatment=$< --control=$(lastword $^)
+	--treatment=$< --control=$(lastword $^) 2> $*.$(chromosome).macs14.out
 
 # Temporary symlinks with treatment status at end of filename
 %_treat.$(chromosome).bam : | align # "Order-only" prerequisite
