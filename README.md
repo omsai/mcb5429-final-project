@@ -7,7 +7,7 @@ To run the pipelines on the Bioinformatics cluster, you can use the
 two provided job submission scripts:
 
 ```bash
-$ qsub chipseq.sh`
+$ qsub chipseq.sh
 $ qsub rnaseq.sh
 ```
 
