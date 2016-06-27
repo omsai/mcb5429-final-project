@@ -85,8 +85,7 @@ targets_motif_sequences = $(targets_peak_sequences:.fa=.motif/meme.txt)
 targets_motif_aligned = $(targets_peak_sequences:.fa=.motif.aligned/mast.txt)
 
 # Rules
-all : qc strip-adapters reqc align bedgraph call-peaks peak-sequences \
-	motif-sequences motif-aligned
+all : qc strip-adapters reqc align bedgraph call-peaks peak-sequences motif-sequences motif-aligned
 qc : $(addprefix qc1/,$(targets_qc))
 strip-adapters : $(targets_adapter_stripped)
 reqc : $(addprefix qc2/,$(targets_reqc))
