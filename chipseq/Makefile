@@ -1,4 +1,4 @@
-# Usage:
+# ChIP-seq analysis
 #
 # To take advantage of parallel processes in this script, on a
 # cluster you must request additional CPU cores from the scheduler.
@@ -8,7 +8,7 @@
 #
 # Then enter the directory containing this Makefile and run it with:
 #
-#     $ make -j 6
+#     $ make -j 6 && exit
 
 
 # Configuration settings
