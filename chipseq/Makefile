@@ -133,7 +133,7 @@ summary : summary_reads.csv
 	> $@
 
 # Call peaks and create PDF model images of the peak calls
-%.$(chromosome)_summits.bed : %_treat.$(chromosome).bam %_untr.$(chromosome).bam
+%.$(chromosome)_summits.bed %.$(chromosome)_model.r : %_treat.$(chromosome).bam %_untr.$(chromosome).bam
 	macs14 --gsize=$(chromosome_size) --name=$*.$(chromosome)	\
 	--treatment=$< --control=$(lastword $^) 2> $@.out
 
