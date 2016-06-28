@@ -158,7 +158,7 @@ summary : summary_reads.csv
 
 # Summary files
 %.summary_reads.csv : | align
-	printf 'dataset,original,no.adapter,aligned,multi.places\n$(subst _,.,$*)' > $@
+	printf 'dataset.name,reads.before.processing,reads.without.adapters,reads.mapped.uniquely,reads.mapped.to.multiple.places\n$(subst _,.,$*)' > $@
 	awk '/^I/{printf ",%s",$$2} /^O/{printf ",%s",$$2}' $*.adapter_removed.fastq.out >> $@
 	awk -v FS=: 'function p(){split($$2,a," ");printf ",%s",a[1]} /^#.*report/{p()} /^#.*supp/{p()} END{printf "\n"}' $*.sam.out >> $@
 
