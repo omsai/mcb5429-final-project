@@ -14,6 +14,10 @@ $ qsub rnaseq.sh
 This will execute the makefiles in the chipseq and rnaseq directories,
 respectively.
 
+WARNING: Due to the 50 GB disk space quota on the cluster,
+you should only ever run one job submission script at a time.
+The intermediate files use several GB of disk space during execution.
+Upon completion (or error), `make` automatically deletes intermediate files.
 
 Interactive
 -----------
