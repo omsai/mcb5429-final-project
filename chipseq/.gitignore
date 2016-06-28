@@ -1,6 +1,6 @@
 *~
-qc1/
-qc2/
+*.data
+*.html
 *.fastq
 *.bam
 *.bai
@@ -15,3 +15,4 @@ qc2/
 *.motif/
 *.aligned/
 *.out
+*.csv
