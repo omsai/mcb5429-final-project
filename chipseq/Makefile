@@ -150,7 +150,6 @@ summary : summary_reads.csv
 
 # Find 2 motifs in treated and untreated sequences
 %.motif/meme.txt : %.fa
-	mkdir -p $@
 	meme $< -dna -nmotifs 2 -minw 5 -maxw 10 -revcomp -mod zoops -oc $(@D)
 
 # Align motifs and count
