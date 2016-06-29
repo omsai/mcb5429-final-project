@@ -1,7 +1,11 @@
-Makefiles and report for analyzing ChIP-seq and RNA-seq data.
+Analysis of ChIP-seq and RNA-seq data.
 
 Usage
 -----
+
+Read Jupyter notebook [report](report.ipynb).
+To verify the calculations or explore the data,
+run the pipelines and then execute the notebook.
 
 To run the pipelines on the Bioinformatics cluster, you can use the
 two provided job submission scripts:
@@ -13,6 +17,8 @@ qsub rnaseq.sh
 
 These will execute makefiles in the chipseq and rnaseq directories,
 respectively.
+
+The wall time for `chipseq` is about 1.5 hours.
 
 Pipeline Development
 --------------------
@@ -36,21 +42,12 @@ all : qc trim align bedgraph htseq
 
 To only run the rnaseq align rule:
 
-```bash
-$ qrsh -pe smp 8
-$ cd path/to/rnaseq/
+```
 $ make threads=8 align
 ```
 
-Note that one needs to change directories after `qrsh` because `qrsh`
-and `qlogin` both seem to ignore the `-cwd` and `-wd` options:
-
-```bash
-$ qrsh -wd $(pwd)
-error: Unknown option -wd
-$ qlogin -cwd
-error: Unknown option -wd
-```
+One can verify the commands executed by make using `make -n`.
+To trace dependencies, use `make -n -di`
 
 Report Development
 ------------------
@@ -64,11 +61,12 @@ Therefore one needs to compile Python 3 from source:
 make -C src/zlib
 make -C src/python
 echo "MODULEPATH=${HOME}/mod:${MODULEPATH}"
-module initadd python
 echo "alias python=python3" >> ~/.bashrc
 echo "alias pip=pip3" >> ~/.bashrc
 echo "alias notebook='jupyter notebook --no-browser'" >> ~/.bashrc
 source ~/.bashrc
+module load python
+module initadd python
 ```
 
 Then install Jupyter with 
@@ -93,16 +91,25 @@ install.packages(c('rzmq','repr','IRkernel','IRdisplay'),
 IRkernel::installspec()
 ```
 
-To view the notebook on the cluster from your local machine,
-you can setup an SSH tunnel:
+Run the notebook server on the cluster with:
 
 ```bash
 jupyter notebook --no-browser
-ssh -N -f -L localhost:8080:localhost:8888 <your_username>@bbcsrv3.biotech.uconn.edu
 ```
 
-Then on your client machine, open a web browser to that port:
+You should see the notebook serve on a URL like
+http://localhost:8080
+
+To view the notebook rom your local machine,
+you can setup an SSH tunnel,
+and then open your web browser:
 
 ```bash
+ssh -N -f -L localhost:8080:localhost:8888 <your_username>@bbcsrv3.biotech.uconn.edu
 xdg-open http://localhost:8080
 ```
+
+OSX users would use `open` instead of `xdg-open`
+
+Click on "report.ipynb" in your browser page
+and in the new tab that opens click: Cell > Run All.
