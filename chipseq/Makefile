@@ -32,14 +32,40 @@ scratch = /scratch
 SHELL = /bin/bash # For using <( cmd ) process substitution
 this_makefile = $(lastword $(MAKEFILE_LIST))
 fastq = $(notdir $(wildcard $(input_prefix)/*.fastq))
-fastq_symlinks = $(addsuffix .fastq,$(call strip_underscores,$(call	\
-	status_move_to_end, $(basename $(fastq)))))
-status_move_to_end = $(foreach file,$1, $(shell echo "$(file)" | sed	\
--E -e 's/(.*)untr(.*)/\1\2_untr/' -e 's/(.*)treat(.*)/\1\2_treat/'))
-strip_underscores = $(foreach file,$1,$(shell echo "$(file)" | sed -e	\
-	's/__/_/g' -e 's/^_//'))
-strip_status = $(sort $(foreach file,$1, $(shell echo "$(file)" | sed	\
--E -e 's/(.*)_untr(.*)/\1\2/' -e 's/(.*)_treat(.*)/\1\2/')))
+define fastq_symlinks
+	$(addsuffix .fastq, \
+	$(call strip_underscores, \
+	$(call rename, \
+	$(basename $(fastq)))))
+endef
+# Rename to format <dataset>_<treatment>_<type>, where <dataset> is
+# omitted for the input.
+define rename
+	$(foreach file,$1, \
+	$(shell echo "$(file)" | \
+	sed -E \
+	-e 's/(.*)_untr(.*)/\2_untr_\1/' \
+	-e 's/(.*)_treat(.*)/\2_treat_\1/' \
+	-e 's/ChIPseq/chip/' \
+	-e 's/Input/input/' \
+	-e 's/^([0-9]+)/rep_\1/' \
+	))
+endef
+define strip_underscores
+	$(foreach file,$1, \
+	$(shell echo "$(file)" | \
+	sed \
+	-e 's/__/_/g' \
+	-e 's/^_//'))
+endef
+define strip_type
+	$(sort \
+	$(foreach file,$1, \
+	$(shell echo "$(file)" | \
+	sed -E \
+	-e 's/(.*)_input(.*)/\1\2/' \
+	-e 's/(.*)_chip(.*)/\1\2/')))
+endef
 symlink_hashmap = $(join $(addsuffix ~,$(fastq)), $(fastq_symlinks))
 symlink_target = $(subst ~$1,,$(filter %~$1,$(symlink_hashmap)))
 colorize = $(if $(findstring untr,$(call filestem $1)) \
@@ -48,7 +74,10 @@ targets_qc = $(fastq_symlinks:.fastq=_fastqc.data)
 targets_aligned = $(fastq_symlinks:.fastq=.$(chromosome).bam)
 targets_reqc = $(fastq_symlinks:.fastq=.adapter_removed_fastqc.data)
 targets_bedgraph = $(fastq_symlinks:.fastq=.$(chromosome).bedgraph)
-targets_peak_calls = $(call strip_status,$(fastq_symlinks:.fastq=.$(chromosome)_summits.bed))
+controls_peak_calls = treat_input.$(chromosome).bam untr_input.$(chromosome).bam
+control = $(filter $(subst _, ,$*)%,$(controls_peak_calls))
+targets_peak_calls = $(filter rep%,$(call				\
+strip_type,$(fastq_symlinks:.fastq=.$(chromosome)_summits.bed)))
 targets_peak_calls_pdfs = $(targets_peak_calls:summits.bed=model.pdf)
 targets_peak_sequences = $(targets_peak_calls:.bed=.top200.fa)
 targets_motif_aligned = $(targets_peak_calls:.bed=.top200.motif.aligned/mast.txt)
@@ -69,16 +98,17 @@ summary : summary_reads.csv
 .PHONY : all qc reqc align bedgraph peak-calls peak-calls-pdfs	\
 	peak-sequences motif-aligned summary
 
-# Sensible file naming of treatment status grouped with file extension
+# Rename files to group treatment and type with file extension
 #
-# The input fastq names have `untr' and `treat' in the middle of the
-# file name instead of towards the end.  This makes them difficult to
+# The input fastq names have type `ChIPseq' / `Input' at the
+# beginning, and treatment `untr' / `treat' in the middle of the file
+# name instead of towards the end.  This makes them difficult to
 # distinguish by make rules, which relate files by extensions
 # (i.e. differences at the end instead of the middle).  Therefore we
 # need to create make-friendly symlinks to the real fastq inputs.
-%_treat.fastq :
+%_chip.fastq :
 	ln -s $(input_prefix)/$(call symlink_target,$@) $@
-%_untr.fastq :
+%_input.fastq :
 	ln -s $(input_prefix)/$(call symlink_target,$@) $@
 
 # QC
@@ -116,7 +146,7 @@ summary : summary_reads.csv
 	samtools view -hb $< $(chromosome) -o $@ 2>&1 > $@.out
 
 # Create sorted bed file
-%.bed : %.bam
+%.$(chromosome).bed : %.$(chromosome).bam
 	bedtools bamtobed -i $< > $@ 2> $@.out
 
 # Create bedgraph header for tracklines
@@ -133,9 +163,9 @@ summary : summary_reads.csv
 	> $@
 
 # Call peaks and create PDF model images of the peak calls
-%.$(chromosome)_summits.bed %.$(chromosome)_model.r : %_treat.$(chromosome).bam %_untr.$(chromosome).bam
+%.$(chromosome)_summits.bed %.$(chromosome)_model.r : %_chip.$(chromosome).bam $(controls_peak_calls)
 	macs14 --gsize=$(chromosome_size) --name=$*.$(chromosome)	\
-	--treatment=$< --control=$(lastword $^) 2> $@.out
+	--treatment=$< --control=$(control) 2> $@.out
 
 # We need `--vanilla` due to a race condition of R depending on
 # .RDataTmp/.RData files
