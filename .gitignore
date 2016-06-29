@@ -4,3 +4,6 @@
 # Sun Grid Engine
 chipseq.sh.*
 rnaseq.sh.*
+
+# Jupyter notebook
+.ipynb_checkpoints/
