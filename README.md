@@ -8,20 +8,11 @@ two provided job submission scripts:
 
 ```bash
 qsub chipseq.sh
-```
-
-```bash
 qsub rnaseq.sh
 ```
 
-This will execute the makefiles in the chipseq and rnaseq directories,
+These will execute makefiles in the chipseq and rnaseq directories,
 respectively.
-
-WARNING: Due to the 50 GB disk space quota on the cluster,
-you should only ever run one job submission script at a time.
-The intermediate files use tens of GB of disk space during execution.
-Upon completion (or error), `make` automatically deletes intermediate files to just a few GB,
-but if both scripts are run at the same time, the disk space might get filled.
 
 Pipeline Development
 --------------------
